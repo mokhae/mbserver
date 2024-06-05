@@ -3,6 +3,7 @@ package mbserver
 
 import (
 	"io"
+	"log"
 	"net"
 	"sync"
 
@@ -90,6 +91,7 @@ func (s *Server) handler() {
 	for {
 		request := <-s.requestChan
 		response := s.handle(request)
+		log.Printf("Response : %v", response.Bytes())
 		request.conn.Write(response.Bytes())
 	}
 }

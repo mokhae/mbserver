@@ -66,7 +66,7 @@ SkipFrameError:
 				continue SkipFrameError
 				//return
 			}
-
+			log.Printf("New Frame : %v\n", frame)
 			Abuf = make([]byte, 0)
 
 			if frame.GetAddress() == deviceId {
