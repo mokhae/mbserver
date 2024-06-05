@@ -28,6 +28,8 @@ func (s *Server) ListenRTU(serialConfig *serial.Config, deviceId uint8) (err err
 }
 
 func (s *Server) acceptSerialRequests(port serial.Port, deviceId uint8) {
+
+	Abuf := make([]byte, 0)
 SkipFrameError:
 	for {
 		select {
@@ -50,9 +52,13 @@ SkipFrameError:
 
 			// Set the length of the packet to the number of read bytes.
 			packet := buffer[:bytesRead]
-
+			res1 := append(Abuf, packet...)
+			if len(Abuf) > 20 {
+				Abuf = make([]byte, 0)
+			}
 			frame, err := NewRTUFrame(packet)
 			if err != nil {
+				Abuf = res1
 				log.Printf("bad serial frame error %v\n", err)
 				//The next line prevents RTU server from exiting when it receives a bad frame. Simply discard the erroneous
 				//frame and wait for next frame by jumping back to the beginning of the 'for' loop.
@@ -60,6 +66,8 @@ SkipFrameError:
 				continue SkipFrameError
 				//return
 			}
+
+			Abuf = make([]byte, 0)
 
 			if frame.GetAddress() == deviceId {
 				request := &Request{port, frame}
@@ -69,4 +77,5 @@ SkipFrameError:
 			}
 		}
 	}
+
 }
