@@ -9,24 +9,26 @@ import (
 
 // ListenRTU starts the Modbus server listening to a serial device.
 // For example:  err := s.ListenRTU(&serial.Config{Address: "/dev/ttyUSB0"})
-func (s *Server) ListenRTU(serialConfig *serial.Config) (err error) {
+func (s *Server) ListenRTU(serialConfig *serial.Config, deviceId uint8) (err error) {
 	port, err := serial.Open(serialConfig)
 	if err != nil {
-		log.Fatalf("failed to open %s: %v\n", serialConfig.Address, err)
+		//log.Fatalf("failed to open %s: %v\n", serialConfig.Address, err)
+		log.Printf("failed to open %s: %v\n", serialConfig.Address, err)
+		return err
 	}
 	s.ports = append(s.ports, port)
 
 	s.portsWG.Add(1)
 	go func() {
 		defer s.portsWG.Done()
-		s.acceptSerialRequests(port)
+		s.acceptSerialRequests(port, deviceId)
 	}()
 
 	return err
 }
 
-func (s *Server) acceptSerialRequests(port serial.Port) {
-	SkipFrameError:
+func (s *Server) acceptSerialRequests(port serial.Port, deviceId uint8) {
+SkipFrameError:
 	for {
 		select {
 		case <-s.portsCloseChan:
@@ -52,16 +54,19 @@ func (s *Server) acceptSerialRequests(port serial.Port) {
 			frame, err := NewRTUFrame(packet)
 			if err != nil {
 				log.Printf("bad serial frame error %v\n", err)
-				//The next line prevents RTU server from exiting when it receives a bad frame. Simply discard the erroneous 
+				//The next line prevents RTU server from exiting when it receives a bad frame. Simply discard the erroneous
 				//frame and wait for next frame by jumping back to the beginning of the 'for' loop.
 				log.Printf("Keep the RTU server running!!\n")
 				continue SkipFrameError
 				//return
 			}
 
-			request := &Request{port, frame}
-
-			s.requestChan <- request
+			if frame.GetAddress() == deviceId {
+				request := &Request{port, frame}
+				s.requestChan <- request
+			} else {
+				log.Printf("wrong slave address")
+			}
 		}
 	}
 }

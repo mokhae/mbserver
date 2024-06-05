@@ -62,6 +62,10 @@ func (frame *RTUFrame) Bytes() []byte {
 	return bytes
 }
 
+func (frame *RTUFrame) GetAddress() uint8 {
+	return frame.Address
+}
+
 // GetFunction returns the Modbus function code.
 func (frame *RTUFrame) GetFunction() uint8 {
 	return frame.Function
