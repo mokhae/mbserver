@@ -34,6 +34,8 @@ SkipFrameError:
 	for {
 		select {
 		case <-s.portsCloseChan:
+
+			log.Printf("Port Closed\n")
 			return
 		default:
 		}
@@ -45,7 +47,7 @@ SkipFrameError:
 			if err != io.EOF {
 				log.Printf("serial read error %v\n", err)
 			}
-			return
+			continue SkipFrameError
 		}
 
 		if bytesRead != 0 {
