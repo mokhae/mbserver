@@ -16,8 +16,8 @@ type RTUFrame struct {
 // NewRTUFrame converts a packet to a Modbus TCP frame.
 func NewRTUFrame(packet []byte) (*RTUFrame, error) {
 	// Check the that the packet length.
-	if len(packet) < 5 {
-		return nil, fmt.Errorf("RTU Frame error: packet less than 5 bytes: %v", packet)
+	if len(packet) < 8 {
+		return nil, fmt.Errorf("RTU Frame error: packet less than 8 bytes: %v", packet)
 	}
 
 	// Check the CRC.
