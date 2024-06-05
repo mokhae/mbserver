@@ -56,7 +56,7 @@ SkipFrameError:
 			if len(Abuf) > 20 {
 				Abuf = make([]byte, 0)
 			}
-			frame, err := NewRTUFrame(packet)
+			frame, err := NewRTUFrame(res1)
 			if err != nil {
 				Abuf = res1
 				log.Printf("bad serial frame error %v\n", err)
