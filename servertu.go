@@ -3,6 +3,7 @@ package mbserver
 import (
 	"io"
 	"log"
+	"strings"
 
 	"github.com/goburrow/serial"
 )
@@ -55,12 +56,16 @@ SkipFrameError:
 			// Set the length of the packet to the number of read bytes.
 			packet := buffer[:bytesRead]
 			res1 := append(Abuf, packet...)
-			if len(Abuf) > 20 {
-				Abuf = make([]byte, 0)
-			}
+			//if len(Abuf) > 20 {
+			//	Abuf = make([]byte, 0)
+			//}
 			frame, err := NewRTUFrame(res1)
 			if err != nil {
-				Abuf = res1
+				if strings.Contains(err.Error(), "RTU Frame error: CRC") {
+					Abuf = make([]byte, 0)
+				} else {
+					Abuf = res1
+				}
 				log.Printf("bad serial frame error %v\n", err)
 				//The next line prevents RTU server from exiting when it receives a bad frame. Simply discard the erroneous
 				//frame and wait for next frame by jumping back to the beginning of the 'for' loop.
