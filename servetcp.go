@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (s *Server) accept(listen net.Listener) error {
+func (s *Server) accept(listen net.Listener, accectCallback ListenCallback, disCallback DisconnectCallback) error {
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
@@ -19,8 +19,24 @@ func (s *Server) accept(listen net.Listener) error {
 			return err
 		}
 
+		// Watchdog
+		s.clientConns.Store(conn, struct{}{})
+		s.watchdog.Feed(conn)
+		if accectCallback != nil {
+			accectCallback(conn)
+		}
+
 		go func(conn net.Conn) {
-			defer conn.Close()
+			defer func() {
+				log.Printf("Client disconnected: %v", conn.RemoteAddr())
+				s.clientConns.Delete(conn)
+				s.watchdog.Remove(conn)
+				if disCallback != nil {
+					disCallback(conn)
+				}
+				conn.Close()
+
+			}()
 
 			for {
 				packet := make([]byte, 512)
@@ -34,7 +50,7 @@ func (s *Server) accept(listen net.Listener) error {
 				// Set the length of the packet to the number of read bytes.
 				packet = packet[:bytesRead]
 
-				frame, err := NewTCPFrame(packet)
+				frame, err := NewTCPFrame(packet, conn)
 				if err != nil {
 					log.Printf("bad packet error %v\n", err)
 					return
@@ -56,7 +72,18 @@ func (s *Server) ListenTCP(addressPort string) (err error) {
 		return err
 	}
 	s.listeners = append(s.listeners, listen)
-	go s.accept(listen)
+	go s.accept(listen, nil, nil)
+	return err
+}
+
+func (s *Server) ListenTCPCallback(addressPort string, accectCallback ListenCallback, disCallback DisconnectCallback) (err error) {
+	listen, err := net.Listen("tcp", addressPort)
+	if err != nil {
+		log.Printf("Failed to Listen: %v\n", err)
+		return err
+	}
+	s.listeners = append(s.listeners, listen)
+	go s.accept(listen, accectCallback, disCallback)
 	return err
 }
 
@@ -68,6 +95,6 @@ func (s *Server) ListenTLS(addressPort string, config *tls.Config) (err error) {
 		return err
 	}
 	s.listeners = append(s.listeners, listen)
-	go s.accept(listen)
+	go s.accept(listen, nil, nil)
 	return err
 }

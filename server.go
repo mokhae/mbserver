@@ -2,12 +2,12 @@
 package mbserver
 
 import (
+	"github.com/goburrow/serial"
 	"io"
 	"log"
 	"net"
 	"sync"
-
-	"github.com/goburrow/serial"
+	"time"
 )
 
 // Server is a Modbus slave with allocated memory for discrete inputs, coils, etc.
@@ -15,11 +15,13 @@ type Server struct {
 	// Debug enables more verbose messaging.
 	Debug            bool
 	listeners        []net.Listener
+	clientConns      sync.Map
+	watchdog         *Watchdog
 	ports            []serial.Port
 	portsWG          sync.WaitGroup
 	portsCloseChan   chan struct{}
 	requestChan      chan *Request
-	function         [256](func(*Server, Framer) ([]byte, *Exception))
+	Function         [256](func(*Server, Framer) ([]byte, *Exception))
 	DiscreteInputs   []byte
 	Coils            []byte
 	HoldingRegisters []uint16
@@ -32,8 +34,11 @@ type Request struct {
 	frame Framer
 }
 
+type ListenCallback func(conn net.Conn)
+type DisconnectCallback func(conn net.Conn)
+
 // NewServer creates a new Modbus server (slave).
-func NewServer() *Server {
+func NewServer(wdFlag bool, wdTimeout time.Duration) *Server {
 	s := &Server{}
 
 	// Allocate Modbus memory maps.
@@ -43,17 +48,27 @@ func NewServer() *Server {
 	s.InputRegisters = make([]uint16, 65536)
 
 	// Add default functions.
-	s.function[1] = ReadCoils
-	s.function[2] = ReadDiscreteInputs
-	s.function[3] = ReadHoldingRegisters
-	s.function[4] = ReadInputRegisters
-	s.function[5] = WriteSingleCoil
-	s.function[6] = WriteHoldingRegister
-	s.function[15] = WriteMultipleCoils
-	s.function[16] = WriteHoldingRegisters
+	s.Function[1] = ReadCoils
+	s.Function[2] = ReadDiscreteInputs
+	s.Function[3] = ReadHoldingRegisters
+	s.Function[4] = ReadInputRegisters
+	s.Function[5] = WriteSingleCoil
+	s.Function[6] = WriteHoldingRegister
+	s.Function[15] = WriteMultipleCoils
+	s.Function[16] = WriteHoldingRegisters
 
 	s.requestChan = make(chan *Request)
 	s.portsCloseChan = make(chan struct{})
+
+	s.watchdog = NewWatchdog(wdTimeout, func(conn net.Conn) {
+		log.Printf("Watchdog timeout: no requests received from %v in the last 10 seconds", conn.RemoteAddr())
+		conn.Close()
+		s.clientConns.Delete(conn)
+	})
+
+	if wdFlag {
+		s.watchdog.Start()
+	}
 
 	go s.handler()
 
@@ -62,7 +77,7 @@ func NewServer() *Server {
 
 // RegisterFunctionHandler override the default behavior for a given Modbus function.
 func (s *Server) RegisterFunctionHandler(funcCode uint8, function func(*Server, Framer) ([]byte, *Exception)) {
-	s.function[funcCode] = function
+	s.Function[funcCode] = function
 }
 
 func (s *Server) handle(request *Request) Framer {
@@ -72,9 +87,11 @@ func (s *Server) handle(request *Request) Framer {
 	response := request.frame.Copy()
 
 	function := request.frame.GetFunction()
-	if s.function[function] != nil {
-		data, exception = s.function[function](s, request.frame)
+	if s.Function[function] != nil {
+		data, exception = s.Function[function](s, request.frame)
 		response.SetData(data)
+
+		s.watchdog.Feed(request.frame.Conn())
 	} else {
 		exception = &IllegalFunction
 	}

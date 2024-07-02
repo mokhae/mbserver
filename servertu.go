@@ -63,6 +63,7 @@ SkipFrameError:
 			if err != nil {
 				if strings.Contains(err.Error(), "RTU Frame error: CRC") {
 					Abuf = make([]byte, 0)
+
 				} else {
 					Abuf = res1
 				}

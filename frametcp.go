@@ -3,6 +3,7 @@ package mbserver
 import (
 	"encoding/binary"
 	"fmt"
+	"net"
 )
 
 // TCPFrame is the Modbus TCP frame.
@@ -13,10 +14,11 @@ type TCPFrame struct {
 	Device                uint8
 	Function              uint8
 	Data                  []byte
+	Connection            net.Conn
 }
 
 // NewTCPFrame converts a packet to a Modbus TCP frame.
-func NewTCPFrame(packet []byte) (*TCPFrame, error) {
+func NewTCPFrame(packet []byte, conn net.Conn) (*TCPFrame, error) {
 	// Check if the packet is too short.
 	if len(packet) < 9 {
 		return nil, fmt.Errorf("TCP Frame error: packet less than 9 bytes")
@@ -29,6 +31,7 @@ func NewTCPFrame(packet []byte) (*TCPFrame, error) {
 		Device:                uint8(packet[6]),
 		Function:              uint8(packet[7]),
 		Data:                  packet[8:],
+		Connection:            conn,
 	}
 
 	// Check expected vs actual packet length.
@@ -37,6 +40,10 @@ func NewTCPFrame(packet []byte) (*TCPFrame, error) {
 	}
 
 	return frame, nil
+}
+
+func (frame *TCPFrame) Conn() net.Conn {
+	return frame.Connection
 }
 
 // Copy the TCPFrame.

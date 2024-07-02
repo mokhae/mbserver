@@ -1,6 +1,9 @@
 package mbserver
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"net"
+)
 
 // Framer is the interface that wraps Modbus frames.
 type Framer interface {
@@ -10,6 +13,7 @@ type Framer interface {
 	GetFunction() uint8
 	SetException(exception *Exception)
 	SetData(data []byte)
+	Conn() net.Conn
 }
 
 // GetException retunrns the Modbus exception or Success (indicating not exception).
