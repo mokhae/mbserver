@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"net"
 )
 
 // RTUFrame is the Modbus TCP frame.
@@ -38,6 +39,10 @@ func NewRTUFrame(packet []byte) (*RTUFrame, error) {
 	}
 
 	return frame, nil
+}
+
+func (frame *RTUFrame) Conn() net.Conn {
+	return nil
 }
 
 // Copy the RTUFrame.
