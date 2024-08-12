@@ -28,7 +28,7 @@ func (s *Server) accept(listen net.Listener, accectCallback ListenCallback, disC
 
 		go func(conn net.Conn) {
 			defer func() {
-				log.Printf("Client disconnected: %v", conn.RemoteAddr())
+				//log.Printf("Client disconnected: %v", conn.RemoteAddr())
 				s.clientConns.Delete(conn)
 				s.watchdog.Remove(conn)
 				if disCallback != nil {

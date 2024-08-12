@@ -10,7 +10,7 @@ import (
 
 // ListenRTU starts the Modbus server listening to a serial device.
 // For example:  err := s.ListenRTU(&serial.Config{Address: "/dev/ttyUSB0"})
-func (s *Server) ListenRTU(serialConfig *serial.Config, deviceId uint8) (err error) {
+func (s *Server) ListenRTU(serialConfig *serial.Config, deviceId uint8, callback PortErrorCallback) (err error) {
 	port, err := serial.Open(serialConfig)
 	if err != nil {
 		//log.Fatalf("failed to open %s: %v\n", serialConfig.Address, err)
@@ -22,13 +22,13 @@ func (s *Server) ListenRTU(serialConfig *serial.Config, deviceId uint8) (err err
 	s.portsWG.Add(1)
 	go func() {
 		defer s.portsWG.Done()
-		s.acceptSerialRequests(port, deviceId)
+		s.acceptSerialRequests(port, deviceId, callback)
 	}()
 
 	return err
 }
 
-func (s *Server) acceptSerialRequests(port serial.Port, deviceId uint8) {
+func (s *Server) acceptSerialRequests(port serial.Port, deviceId uint8, callback PortErrorCallback) {
 
 	Abuf := make([]byte, 0)
 SkipFrameError:
@@ -49,8 +49,14 @@ SkipFrameError:
 				log.Printf("serial read error %v\n", err)
 				break
 			}
-			continue SkipFrameError
-			//continue
+			if err == serial.ErrTimeout {
+				continue SkipFrameError
+			} else {
+				if callback != nil {
+					callback(err)
+				}
+				return
+			}
 		}
 
 		if bytesRead > 0 {
@@ -69,23 +75,26 @@ SkipFrameError:
 				} else {
 					Abuf = res1
 				}
-				log.Printf("bad serial frame error %v\n", err)
+				//log.Printf("bad serial frame error %v\n", err)
 				//The next line prevents RTU server from exiting when it receives a bad frame. Simply discard the erroneous
 				//frame and wait for next frame by jumping back to the beginning of the 'for' loop.
-				log.Printf("Keep the RTU server running!!\n")
+				//log.Printf("Keep the RTU server running!!\n")
 				continue SkipFrameError
 				//return
 			}
-			log.Printf("New Frame : %v\n", frame)
+			//log.Printf("New Frame : %v\n", frame)
 			Abuf = make([]byte, 0)
 
 			if frame.GetAddress() == deviceId {
-				log.Printf("slave address : %v\n", frame.GetAddress())
+				//log.Printf("slave address : %v\n", frame.GetAddress())
 				request := &Request{port, frame}
 				s.requestChan <- request
-			} else {
-				log.Printf("wrong slave address")
+				<-s.responseChan
+
 			}
+			//else {
+			//	log.Printf("wrong slave address")
+			//}
 		}
 	}
 

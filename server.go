@@ -21,6 +21,7 @@ type Server struct {
 	portsWG          sync.WaitGroup
 	portsCloseChan   chan struct{}
 	requestChan      chan *Request
+	responseChan     chan bool
 	Function         [256](func(*Server, Framer) ([]byte, *Exception))
 	DiscreteInputs   []byte
 	Coils            []byte
@@ -36,6 +37,7 @@ type Request struct {
 
 type ListenCallback func(conn net.Conn)
 type DisconnectCallback func(conn net.Conn)
+type PortErrorCallback func(err error)
 
 // NewServer creates a new Modbus server (slave).
 func NewServer(wdFlag bool, wdTimeout time.Duration) *Server {
@@ -109,12 +111,12 @@ func (s *Server) handler() {
 		request := <-s.requestChan
 		response := s.handle(request)
 		//log.Printf("Response : %v", response.Bytes())
-		n, err := request.conn.Write(response.Bytes())
+		_, err := request.conn.Write(response.Bytes())
 		if err != nil {
 			log.Printf("Write error: %v", err)
 		}
-		log.Printf("Write %v bytes to client", n)
-
+		//log.Printf("Write %v bytes to client", n)
+		s.responseChan <- true
 	}
 }
 
