@@ -30,7 +30,7 @@ func TestAduSetDataWithRegisterAndNumberAndValues(t *testing.T) {
 }
 
 func TestUnsupportedFunction(t *testing.T) {
-	s := NewServer()
+	s := NewServer(false, 5)
 	var frame TCPFrame
 	frame.Function = 255
 
@@ -45,7 +45,7 @@ func TestUnsupportedFunction(t *testing.T) {
 
 func TestModbus(t *testing.T) {
 	// Server
-	s := NewServer()
+	s := NewServer(false, 5)
 	err := s.ListenTCP("127.0.0.1:3333")
 	if err != nil {
 		t.Fatalf("failed to listen, got %v\n", err)
