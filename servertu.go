@@ -48,10 +48,11 @@ SkipFrameError:
 			if err != io.EOF {
 				log.Printf("serial read error %v\n", err)
 			}
-			continue SkipFrameError
+			//continue SkipFrameError
+			continue
 		}
 
-		if bytesRead >= 8 {
+		if bytesRead >= 0 {
 
 			// Set the length of the packet to the number of read bytes.
 			packet := buffer[:bytesRead]
