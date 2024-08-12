@@ -52,7 +52,7 @@ SkipFrameError:
 			continue
 		}
 
-		if bytesRead >= 0 {
+		if bytesRead > 0 {
 
 			// Set the length of the packet to the number of read bytes.
 			packet := buffer[:bytesRead]
