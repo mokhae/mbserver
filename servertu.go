@@ -51,7 +51,7 @@ SkipFrameError:
 			continue SkipFrameError
 		}
 
-		if bytesRead != 0 {
+		if bytesRead >= 8 {
 
 			// Set the length of the packet to the number of read bytes.
 			packet := buffer[:bytesRead]
@@ -78,6 +78,7 @@ SkipFrameError:
 			Abuf = make([]byte, 0)
 
 			if frame.GetAddress() == deviceId {
+				log.Printf("slave address : %v\n", frame.GetAddress())
 				request := &Request{port, frame}
 				s.requestChan <- request
 			} else {
