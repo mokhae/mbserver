@@ -45,11 +45,12 @@ SkipFrameError:
 
 		bytesRead, err := port.Read(buffer)
 		if err != nil {
-			if err != io.EOF {
+			if err == io.EOF {
 				log.Printf("serial read error %v\n", err)
+				break
 			}
-			//continue SkipFrameError
-			continue
+			continue SkipFrameError
+			//continue
 		}
 
 		if bytesRead > 0 {
