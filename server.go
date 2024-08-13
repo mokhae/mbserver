@@ -60,6 +60,7 @@ func NewServer(wdFlag bool, wdTimeout time.Duration) *Server {
 	s.Function[16] = WriteHoldingRegisters
 
 	s.requestChan = make(chan *Request)
+	s.responseChan = make(chan bool)
 	s.portsCloseChan = make(chan struct{})
 
 	s.watchdog = NewWatchdog(wdTimeout, func(conn net.Conn) {

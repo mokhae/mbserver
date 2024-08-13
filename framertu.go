@@ -3,7 +3,6 @@ package mbserver
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"net"
 )
 
@@ -23,7 +22,7 @@ func NewRTUFrame(packet []byte) (*RTUFrame, error) {
 	}
 
 	// Check the CRC.
-	log.Printf("Packet : %v", packet)
+	//log.Printf("Packet : %v", packet)
 	pLen := len(packet)
 	crcExpect := binary.LittleEndian.Uint16(packet[pLen-2 : pLen])
 	crcCalc := crcModbus(packet[0 : pLen-2])
