@@ -117,6 +117,7 @@ func (s *Server) handler() {
 		if err != nil {
 			log.Printf("Request Write error: %v", err)
 		}
+
 		//log.Printf("Write %v bytes to client", n)
 		s.responseChan <- true
 	}
