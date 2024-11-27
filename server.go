@@ -112,9 +112,10 @@ func (s *Server) handler() {
 		request := <-s.requestChan
 		response := s.handle(request)
 		//log.Printf("Response : %v", response.Bytes())
+
 		_, err := request.conn.Write(response.Bytes())
 		if err != nil {
-			log.Printf("Write error: %v", err)
+			log.Printf("Request Write error: %v", err)
 		}
 		//log.Printf("Write %v bytes to client", n)
 		s.responseChan <- true
