@@ -2,12 +2,13 @@
 package mbserver
 
 import (
-	"github.com/goburrow/serial"
 	"io"
 	"log"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/goburrow/serial"
 )
 
 // Server is a Modbus slave with allocated memory for discrete inputs, coils, etc.
@@ -64,7 +65,7 @@ func NewServer(wdFlag bool, wdTimeout time.Duration) *Server {
 	s.portsCloseChan = make(chan struct{})
 
 	s.watchdog = NewWatchdog(wdTimeout, func(conn net.Conn) {
-		log.Printf("Watchdog timeout: no requests received from %v in the last 10 seconds", conn.RemoteAddr())
+		log.Printf("Watchdog timeout: no requests received from %v in the last %v", conn.RemoteAddr(), wdTimeout)
 		conn.Close()
 		s.clientConns.Delete(conn)
 	})
