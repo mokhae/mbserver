@@ -95,7 +95,7 @@ func (s *Server) handle(request *Request) Framer {
 		data, exception = s.Function[function](s, request.frame)
 		response.SetData(data)
 
-		s.watchdog.Feed(request.frame.Conn())
+		//s.watchdog.Feed(request.frame.Conn())
 	} else {
 		exception = &IllegalFunction
 	}

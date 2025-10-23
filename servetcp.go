@@ -59,6 +59,7 @@ func (s *Server) accept(listen net.Listener, accectCallback ListenCallback, disC
 				request := &Request{conn, frame}
 
 				s.requestChan <- request
+				<-s.responseChan
 			}
 		}(conn)
 	}
