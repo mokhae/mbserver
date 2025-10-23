@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	serv := mbserver.NewServer(false, 5*time.Second)
+	serv := mbserver.NewServer(true, 5*time.Second)
 	err := serv.ListenTCP("0.0.0.0:502")
 	if err != nil {
 		log.Printf("%v\n", err)
