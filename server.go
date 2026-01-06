@@ -112,6 +112,11 @@ func (s *Server) handler() {
 	for {
 		request := <-s.requestChan
 		response := s.handle(request)
+		if s.Debug {
+			log.Printf("Request : % x", request.frame.Bytes())
+
+			log.Printf("Response : % x", response.Bytes())
+		}
 		//log.Printf("Response : %v", response.Bytes())
 
 		_, err := request.conn.Write(response.Bytes())
