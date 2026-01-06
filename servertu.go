@@ -1,6 +1,7 @@
 package mbserver
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -51,7 +52,7 @@ SkipFrameError:
 				log.Printf("serial read error %v\n", err)
 				break
 			}
-			if err == serial.ErrTimeout {
+			if errors.Is(err, serial.ErrTimeout) {
 				if len(Abuf) > 0 {
 					if callback != nil {
 						callback(fmt.Errorf("timeout error"))
