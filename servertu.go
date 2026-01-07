@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/goburrow/serial"
 )
@@ -25,10 +26,42 @@ func (s *Server) ListenRTU(serialConfig *serial.Config, deviceId uint8, callback
 	go func() {
 		defer s.portsWG.Done()
 		//log.Printf("facceptSerialRequests %v: %v\n", port, deviceId)
-		s.acceptSerialRequests(port, deviceId, callback)
+		//s.acceptSerialRequests(port, deviceId, callback)
+
+		currentPort := port
+
+		for {
+			// 읽기 루프 시작
+			s.acceptSerialRequests(currentPort, deviceId, callback)
+
+			// acceptSerialRequests가 리턴되었다는 것은 연결이 끊어졌다는 뜻
+			log.Printf("Serial connection lost. Reconnecting...")
+			currentPort.Close() // 기존 포트 닫기
+
+			// 재연결 시도 루프
+			for {
+				time.Sleep(1 * time.Second) // 1초 대기
+				// 종료 신호 확인
+				select {
+				case <-s.portsCloseChan:
+					return
+				default:
+				}
+
+				// 포트 다시 열기
+				newPort, err := serial.Open(serialConfig)
+				if err == nil {
+					log.Printf("Serial connection re-established")
+					currentPort = newPort
+					// s.ports 관리 로직 필요 (스레드 안전 주의)
+					break // 재연결 성공 시 다시 읽기 루프로 이동
+				}
+				log.Printf("Reconnection failed: %v", err)
+			}
+		}
 	}()
 
-	return err
+	return nil
 }
 
 func (s *Server) acceptSerialRequests(port serial.Port, deviceId uint8, callback PortErrorCallback) {
@@ -55,7 +88,7 @@ SkipFrameError:
 			if errors.Is(err, serial.ErrTimeout) {
 				if len(Abuf) > 0 {
 					if callback != nil {
-						callback(fmt.Errorf("timeout error"))
+						callback(fmt.Errorf("timeout error : %v", err))
 					}
 					Abuf = make([]byte, 0)
 				}

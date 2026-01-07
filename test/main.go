@@ -32,11 +32,12 @@ func main() {
 		DataBits: 8,
 		StopBits: 1,
 		Parity:   "E",
-		Timeout:  10 * time.Second}, 1, nil)
+		Timeout:  10 * time.Second}, 1, serialCallback)
 	if err != nil {
 		log.Printf("failed to listen, got %v", err)
 	}
 
+	serv.Debug = true
 	log.Printf("Open MB Serial Server")
 
 	for {
@@ -46,4 +47,8 @@ func main() {
 
 	}
 
+}
+
+func serialCallback(err error) {
+	log.Printf("Serial Error : %v", err)
 }
