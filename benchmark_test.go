@@ -31,7 +31,7 @@ func serverClientSetup() *serverClient {
 	setup := &serverClient{}
 
 	// Server
-	setup.slave = NewServer()
+	setup.slave = NewServer(false, 0, 0)
 	addr := getFreePort()
 	go setup.slave.ListenTCP(addr)
 
@@ -139,7 +139,7 @@ func BenchmarkModbusRead125HoldingRegisters(b *testing.B) {
 // Start a Modbus server and use a client to write to and read from the serer.
 func Example() {
 	// Start the server.
-	serv := NewServer()
+	serv := NewServer(false, 0, 0)
 	err := serv.ListenTCP("127.0.0.1:1502")
 	if err != nil {
 		log.Printf("%v\n", err)
@@ -179,7 +179,7 @@ func Example() {
 
 // Override the default ReadDiscreteInputs funtion.
 func ExampleServer_RegisterFunctionHandler() {
-	serv := NewServer()
+	serv := NewServer(false, 0, 0)
 
 	// Override ReadDiscreteInputs function.
 	serv.RegisterFunctionHandler(2,

@@ -6,7 +6,30 @@ import (
 	"log"
 	"net"
 	"strings"
+	"time"
 )
+
+type tcpSessionState int
+
+const (
+	tcpSessionActive tcpSessionState = iota
+	tcpSessionGrace
+)
+
+type tcpSession struct {
+	remoteIP   string
+	conn       net.Conn
+	state      tcpSessionState
+	graceTimer *time.Timer
+}
+
+func extractRemoteIP(addr net.Addr) string {
+	host, _, err := net.SplitHostPort(addr.String())
+	if err != nil {
+		return addr.String()
+	}
+	return host
+}
 
 func (s *Server) accept(listen net.Listener, accectCallback ListenCallback, disCallback DisconnectCallback) error {
 	for {
@@ -19,23 +42,73 @@ func (s *Server) accept(listen net.Listener, accectCallback ListenCallback, disC
 			return err
 		}
 
-		// Watchdog
+		remoteIP := extractRemoteIP(conn.RemoteAddr())
+
+		var session *tcpSession
+		isReconnect := false
+
+		if s.disconnectTimeout > 0 {
+			s.tcpSessionsMu.Lock()
+			session = s.tcpSessions[remoteIP]
+
+			if session != nil && session.state == tcpSessionGrace {
+				// Reconnect within grace period — cancel timer, restore session
+				session.graceTimer.Stop()
+				session.graceTimer = nil
+				session.state = tcpSessionActive
+				session.conn = conn
+				isReconnect = true
+			} else {
+				session = &tcpSession{
+					remoteIP: remoteIP,
+					conn:     conn,
+					state:    tcpSessionActive,
+				}
+				s.tcpSessions[remoteIP] = session
+			}
+			s.tcpSessionsMu.Unlock()
+		}
+
 		s.clientConns.Store(conn, struct{}{})
 		s.watchdog.Feed(conn)
-		if accectCallback != nil {
+
+		if !isReconnect && accectCallback != nil {
 			accectCallback(conn)
 		}
 
-		go func(conn net.Conn) {
+		go func(conn net.Conn, session *tcpSession) {
 			defer func() {
-				//log.Printf("Client disconnected: %v", conn.RemoteAddr())
 				s.clientConns.Delete(conn)
 				s.watchdog.Remove(conn)
-				if disCallback != nil {
-					disCallback(conn)
-				}
 				conn.Close()
 
+				if session != nil {
+					// disconnectTimeout > 0: start grace period
+					s.tcpSessionsMu.Lock()
+					if session.conn == conn {
+						session.state = tcpSessionGrace
+						session.conn = nil
+						session.graceTimer = time.AfterFunc(s.disconnectTimeout, func() {
+							s.tcpSessionsMu.Lock()
+							if s.tcpSessions[session.remoteIP] == session && session.state == tcpSessionGrace {
+								delete(s.tcpSessions, session.remoteIP)
+								s.tcpSessionsMu.Unlock()
+								if disCallback != nil {
+									disCallback(conn)
+								}
+							} else {
+								s.tcpSessionsMu.Unlock()
+							}
+						})
+					}
+					// else: new conn already took over this session — do nothing
+					s.tcpSessionsMu.Unlock()
+				} else {
+					// disconnectTimeout == 0: immediate cleanup, original behavior
+					if disCallback != nil {
+						disCallback(conn)
+					}
+				}
 			}()
 
 			for {
@@ -47,7 +120,6 @@ func (s *Server) accept(listen net.Listener, accectCallback ListenCallback, disC
 					}
 					return
 				}
-				// Set the length of the packet to the number of read bytes.
 				packet = packet[:bytesRead]
 
 				frame, err := NewTCPFrame(packet, conn)
@@ -63,7 +135,7 @@ func (s *Server) accept(listen net.Listener, accectCallback ListenCallback, disC
 				s.requestChan <- request
 				<-s.responseChan
 			}
-		}(conn)
+		}(conn, session)
 	}
 }
 

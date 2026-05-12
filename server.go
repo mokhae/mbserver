@@ -14,20 +14,23 @@ import (
 // Server is a Modbus slave with allocated memory for discrete inputs, coils, etc.
 type Server struct {
 	// Debug enables more verbose messaging.
-	Debug            bool
-	listeners        []net.Listener
-	clientConns      sync.Map
-	watchdog         *Watchdog
-	ports            []serial.Port
-	portsWG          sync.WaitGroup
-	portsCloseChan   chan struct{}
-	requestChan      chan *Request
-	responseChan     chan bool
-	Function         [256](func(*Server, Framer) ([]byte, *Exception))
-	DiscreteInputs   []byte
-	Coils            []byte
-	HoldingRegisters []uint16
-	InputRegisters   []uint16
+	Debug             bool
+	listeners         []net.Listener
+	clientConns       sync.Map
+	watchdog          *Watchdog
+	ports             []serial.Port
+	portsWG           sync.WaitGroup
+	portsCloseChan    chan struct{}
+	requestChan       chan *Request
+	responseChan      chan bool
+	disconnectTimeout time.Duration
+	tcpSessions       map[string]*tcpSession
+	tcpSessionsMu     sync.Mutex
+	Function          [256](func(*Server, Framer) ([]byte, *Exception))
+	DiscreteInputs    []byte
+	Coils             []byte
+	HoldingRegisters  []uint16
+	InputRegisters    []uint16
 }
 
 // Request contains the connection and Modbus frame.
@@ -41,7 +44,10 @@ type DisconnectCallback func(conn net.Conn)
 type PortErrorCallback func(err error)
 
 // NewServer creates a new Modbus server (slave).
-func NewServer(wdFlag bool, wdTimeout time.Duration) *Server {
+// disconnectTimeout: grace period before firing the disconnect callback.
+// If a client reconnects from the same IP within this duration, the session is preserved
+// and no callbacks fire. Pass 0 to disable (immediate disconnect handling).
+func NewServer(wdFlag bool, wdTimeout time.Duration, disconnectTimeout time.Duration) *Server {
 	s := &Server{}
 
 	// Allocate Modbus memory maps.
@@ -63,6 +69,8 @@ func NewServer(wdFlag bool, wdTimeout time.Duration) *Server {
 	s.requestChan = make(chan *Request)
 	s.responseChan = make(chan bool)
 	s.portsCloseChan = make(chan struct{})
+	s.disconnectTimeout = disconnectTimeout
+	s.tcpSessions = make(map[string]*tcpSession)
 
 	s.watchdog = NewWatchdog(wdTimeout, func(conn net.Conn) {
 		log.Printf("Watchdog timeout: no requests received from %v in the last %v", conn.RemoteAddr(), wdTimeout)

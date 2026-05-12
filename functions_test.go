@@ -16,7 +16,7 @@ func isEqual(a interface{}, b interface{}) bool {
 
 // Function 1
 func TestReadCoils(t *testing.T) {
-	s := NewServer()
+	s := NewServer(false, 0, 0)
 	// Set the coil values
 	s.Coils[10] = 1
 	s.Coils[11] = 1
@@ -50,7 +50,7 @@ func TestReadCoils(t *testing.T) {
 
 // Function 2
 func TestReadDiscreteInputs(t *testing.T) {
-	s := NewServer()
+	s := NewServer(false, 0, 0)
 	// Set the discrete input values
 	s.DiscreteInputs[0] = 1
 	s.DiscreteInputs[7] = 1
@@ -83,7 +83,7 @@ func TestReadDiscreteInputs(t *testing.T) {
 
 // Function 3
 func TestReadHoldingRegisters(t *testing.T) {
-	s := NewServer()
+	s := NewServer(false, 0, 0)
 	s.HoldingRegisters[100] = 1
 	s.HoldingRegisters[101] = 2
 	s.HoldingRegisters[102] = 65535
@@ -113,7 +113,7 @@ func TestReadHoldingRegisters(t *testing.T) {
 
 // Function 4
 func TestReadInputRegisters(t *testing.T) {
-	s := NewServer()
+	s := NewServer(false, 0, 0)
 	s.InputRegisters[200] = 1
 	s.InputRegisters[201] = 2
 	s.InputRegisters[202] = 65535
@@ -143,7 +143,7 @@ func TestReadInputRegisters(t *testing.T) {
 
 // Function 5
 func TestWriteSingleCoil(t *testing.T) {
-	s := NewServer()
+	s := NewServer(false, 0, 0)
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -170,7 +170,7 @@ func TestWriteSingleCoil(t *testing.T) {
 
 // Function 6
 func TestWriteHoldingRegister(t *testing.T) {
-	s := NewServer()
+	s := NewServer(false, 0, 0)
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -197,7 +197,7 @@ func TestWriteHoldingRegister(t *testing.T) {
 
 // Function 15
 func TestWriteMultipleCoils(t *testing.T) {
-	s := NewServer()
+	s := NewServer(false, 0, 0)
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -224,7 +224,7 @@ func TestWriteMultipleCoils(t *testing.T) {
 
 // Function 16
 func TestWriteHoldingRegisters(t *testing.T) {
-	s := NewServer()
+	s := NewServer(false, 0, 0)
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1
@@ -268,7 +268,7 @@ func TestUint16ToBytes(t *testing.T) {
 }
 
 func TestOutOfBounds(t *testing.T) {
-	s := NewServer()
+	s := NewServer(false, 0, 0)
 
 	var frame TCPFrame
 	frame.TransactionIdentifier = 1

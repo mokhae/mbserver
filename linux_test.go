@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package mbserver
@@ -30,7 +31,7 @@ func TestModbusRTU(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Server
-	s := NewServer()
+	s := NewServer(false, 0, 0)
 	err = s.ListenRTU(&serial.Config{
 		Address:  "ttyFOO",
 		BaudRate: 115200,
