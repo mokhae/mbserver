@@ -27,10 +27,15 @@ type Server struct {
 	tcpSessions       map[string]*tcpSession
 	tcpSessionsMu     sync.Mutex
 	Function          [256](func(*Server, Framer) ([]byte, *Exception))
-	DiscreteInputs    []byte
-	Coils             []byte
-	HoldingRegisters  []uint16
-	InputRegisters    []uint16
+	// regMu guards concurrent access to the memory maps below (DiscreteInputs,
+	// Coils, HoldingRegisters, InputRegisters). Modbus request handlers and any
+	// external goroutine that touches these slices must hold it. Prefer the
+	// Read*/Write* accessor methods (registers.go) over direct field access.
+	regMu            sync.RWMutex
+	DiscreteInputs   []byte
+	Coils            []byte
+	HoldingRegisters []uint16
+	InputRegisters   []uint16
 }
 
 // Request contains the connection and Modbus frame.
